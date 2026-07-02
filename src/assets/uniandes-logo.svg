@@ -1,0 +1,11 @@
+<svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Universidad de los Andes">
+  <defs>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFF65E"/>
+      <stop offset="100%" stop-color="#F2D900"/>
+    </linearGradient>
+  </defs>
+  <path d="M160 20 C270 20 300 90 300 170 C300 260 200 312 160 312 C120 312 20 260 20 170 C20 90 50 20 160 20 Z" fill="url(#shine)" stroke="#111111" stroke-width="10"/>
+  <path d="M147 52 C150 46 170 46 173 52 L187 238 C187 250 176 264 160 264 C144 264 133 250 133 238 L147 52 Z" fill="#111111"/>
+  <path d="M159 78 C158 74 162 74 161 78 L166 198 C166 202 162 204 159 204 C156 204 152 202 152 198 L159 78 Z" fill="#F7F7F7"/>
+</svg>
