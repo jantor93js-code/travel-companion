@@ -102,6 +102,7 @@ export default function AdminForm({ onSave }: Props) {
       return;
     }
 
+    const existingSegment = segments.find((item) => item.id === editingSegmentId);
     const nextSegment = {
       id: editingSegmentId ?? crypto.randomUUID(),
       origin,
@@ -113,11 +114,17 @@ export default function AdminForm({ onSave }: Props) {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       airline,
       flightNumber,
-      ticketDocumentName: segmentTicketName || segmentTicket?.name,
+      ...(segmentTicketName || segmentTicket?.name
+        ? { ticketDocumentName: segmentTicketName || segmentTicket?.name }
+        : {}),
       ticketUrl: segmentTicket
         ? URL.createObjectURL(segmentTicket)
-        : segments.find((item) => item.id === editingSegmentId)?.ticketUrl ?? "",
-    } as Trip["segments"][number];
+        : existingSegment?.ticketUrl ?? "",
+      ticketFile: segmentTicket ?? undefined,
+      ...(existingSegment?.ticketPath !== undefined
+        ? { ticketPath: existingSegment.ticketPath }
+        : {}),
+    } as Trip["segments"][number] & { ticketFile?: File | null };
 
     setSegments((prev) => {
       if (editingSegmentId) {
@@ -157,6 +164,7 @@ export default function AdminForm({ onSave }: Props) {
       return;
     }
 
+    const existingStay = stays.find((item) => item.id === editingStayId);
     const nextStay = {
       id: editingStayId ?? crypto.randomUUID(),
       city: hotelCity,
@@ -165,11 +173,17 @@ export default function AdminForm({ onSave }: Props) {
       checkInTime,
       checkOut: checkOutDate,
       checkOutTime,
-      reservationDocumentName: reservationFileName || reservationFile?.name,
+      ...(reservationFileName || reservationFile?.name
+        ? { reservationDocumentName: reservationFileName || reservationFile?.name }
+        : {}),
       reservationUrl: reservationFile
         ? URL.createObjectURL(reservationFile)
-        : stays.find((item) => item.id === editingStayId)?.reservationUrl ?? "",
-    } as Trip["stays"][number];
+        : existingStay?.reservationUrl ?? "",
+      reservationFile: reservationFile ?? undefined,
+      ...(existingStay?.reservationPath !== undefined
+        ? { reservationPath: existingStay.reservationPath }
+        : {}),
+    } as Trip["stays"][number] & { reservationFile?: File | null };
 
     setStays((prev) => {
       if (editingStayId) {
@@ -202,15 +216,25 @@ export default function AdminForm({ onSave }: Props) {
   };
 
   const handleSaveTrip = async () => {
-    const saved = await persistTrip(
-      { ...trip, segments, stays },
-      segments,
-      stays,
-    );
-    if (onSave) {
-      onSave(saved);
+    try {
+      const saved = await persistTrip(
+        { ...trip, segments, stays },
+        segments,
+        stays,
+      );
+
+      if (onSave) {
+        onSave(saved);
+      }
+      navigate("/admin");
+    } catch (error) {
+      console.error("[SAVE] Error en handleSaveTrip", error);
+      window.alert(
+        error instanceof Error
+          ? `No se pudo guardar el viaje: ${error.message}`
+          : "No se pudo guardar el viaje. Revisa la consola para más detalles.",
+      );
     }
-    navigate("/admin");
   };
 
   return (

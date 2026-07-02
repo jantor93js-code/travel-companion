@@ -31,6 +31,7 @@ export interface Segment {
   ticketDocumentName?: string;
 
   ticketUrl?: string;
+  ticketPath?: string;
 }
 export interface Stay {
   id: string;
@@ -46,6 +47,7 @@ export interface Stay {
   checkOutTime?: string;
 
   reservationUrl?: string;
+  reservationPath?: string;
 
   reservationDocumentName?: string;
 }

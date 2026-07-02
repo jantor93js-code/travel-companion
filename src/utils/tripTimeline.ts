@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import type { Segment, Stay, Trip } from "../types/trip";
+import { getDocumentUrl } from "../services/supabase";
 
 export type TripEventStatus = "COMPLETED" | "CURRENT" | "UPCOMING" | "FUTURE" | "INVALID";
 export type TripEventType = "flight" | "stay";
@@ -52,6 +53,26 @@ const formatDate = (date: DateTime) =>
 const formatTime = (date: DateTime) =>
   date.setLocale("es").toLocaleString(DateTime.TIME_SIMPLE);
 
+const computeStayStatus = (
+  start: DateTime,
+  end: DateTime,
+  currentTime: DateTime,
+): TripEventStatus => {
+  if (!start.isValid || !end.isValid) {
+    return "INVALID";
+  }
+
+  if (end <= currentTime) {
+    return "COMPLETED";
+  }
+
+  if (start <= currentTime && currentTime < end) {
+    return "CURRENT";
+  }
+
+  return "UPCOMING";
+};
+
 const buildFlightEvent = (segment: Segment, zone: string): TripTimelineEvent => {
   const departure = parseEventDate(segment.departureDate, segment.departureTime, zone);
   const arrival = segment.arrivalDate || segment.arrivalTime
@@ -71,6 +92,8 @@ const buildFlightEvent = (segment: Segment, zone: string): TripTimelineEvent => 
     ? `${formatDate(departure)} · ${formatTime(departure)}`
     : "Fecha de salida no disponible";
 
+  const ticketUrl = segment.ticketUrl ?? (segment.ticketPath ? getDocumentUrl(segment.ticketPath) : undefined);
+
   return {
     id: segment.id,
     type: "flight",
@@ -80,8 +103,8 @@ const buildFlightEvent = (segment: Segment, zone: string): TripTimelineEvent => 
     start,
     end,
     status: "FUTURE",
-    actionLabel: segment.ticketUrl ? "Ver tiquete" : undefined,
-    actionUrl: segment.ticketUrl,
+    actionLabel: ticketUrl ? "Ver tiquete" : undefined,
+    actionUrl: ticketUrl,
     displayMeta,
     validationMessage,
   };
@@ -109,6 +132,8 @@ const buildStayEvent = (stay: Stay, zone: string): TripTimelineEvent => {
     ? `${formatDate(arrival)} — ${formatDate(departure)}`
     : "Fechas de hotel incompletas";
 
+  const reservationUrl = stay.reservationUrl ?? (stay.reservationPath ? getDocumentUrl(stay.reservationPath) : undefined);
+
   return {
     id: stay.id,
     type: "stay",
@@ -118,8 +143,8 @@ const buildStayEvent = (stay: Stay, zone: string): TripTimelineEvent => {
     start: arrival ?? DateTime.invalid("Invalid check-in"),
     end,
     status: "FUTURE",
-    actionLabel: stay.reservationUrl ? "Ver reserva" : undefined,
-    actionUrl: stay.reservationUrl,
+    actionLabel: reservationUrl ? "Ver reserva" : undefined,
+    actionUrl: reservationUrl,
     displayMeta,
     validationMessage,
   };
@@ -142,6 +167,10 @@ const computeStatus = (
       return { ...event, status: "INVALID" as const, validationMessage: "Evento con fechas no válidas." };
     }
 
+    if (event.type === "stay") {
+      return { ...event, status: computeStayStatus(event.start, event.end, currentTime) };
+    }
+
     if (event.end < currentTime) {
       return { ...event, status: "COMPLETED" as const };
     }
@@ -153,7 +182,7 @@ const computeStatus = (
     return { ...event, status: "FUTURE" as const };
   });
 
-  const nextIndex = annotated.findIndex((event) => event.status === "FUTURE");
+  const nextIndex = annotated.findIndex((event) => event.status === "FUTURE" || event.status === "UPCOMING");
   return annotated.map((event, index) => {
     if (event.status !== "FUTURE") {
       return event;
